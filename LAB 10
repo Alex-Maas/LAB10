@@ -1,0 +1,184 @@
+/*
+ * Alex Daniel Maas Esquivel
+ * # 17146
+ */
+// Librerias utlizadas
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "inc/tm4c123gh6pm.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_gpio.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/gpio.h"
+#include "driverlib/uart.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/fpu.h"
+#include "utils/uartstdio.h"
+
+void UARTSend(uint32_t ui32UARTBase, const uint8_t *pui8Buffer, uint32_t ui32Count);
+
+
+int modo;
+char wifi[] = {'A','T','+','C','W','J','A','P','=','"','T','U','R','B','O','N','E' ,'T' ,'T' ,'"',',','"','A','E','7','F','8','C','B','8','8','B','"','\r','\n'};
+int estado;
+char conect[] = {'A','T','+','C','I','P','S','T','A','R','T','=','"','T','C','P','"',',','"','1','9','2','.','1','6','8','.','1','.','1','4','"',',','8','0','\r','\n'};
+int VAR;
+char envio[] = {'P','O','S','T',' ','/','i','n','d','e','x','.','p','h','p',' ','H','T','T','P','/','1','.','0','\r','\n','H','o','s','t',':',' ',' ','1','9','2','.','1','6','8','.','1','.','1','4','\r','\n','A','c','c','e','p','t',':',' ','*','/','*','\r','\n','C','o','n','t','e','n','t','-','L','e','n','g','t','h',':',' ','3','7','\r','\n','C','o','n','t','e','n','t','-','T','y','p','e',':',' ','a','p','p','l','i','c','a','t','i','o','n','/','x','-','w','w','w','-','f','o','r','m','-','u','r','l','e','n','c','o','d','e','d','\r','\n','\r','\n','c','a','r','n','e','t','=','1','7','1','4','6','&','i','d','_','c','o','l','o','r','=','1','&','c','o','l','o','r','=','#','F','F','0','0','F','F','\r','\n'};
+
+int main(void)
+{
+    SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);     //CONFIGURACION A 40MHz
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);                                                //PUERTO F
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOF)) {
+    }
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2);               //LED COMO SALIDAS
+    HWREG (GPIO_PORTF_BASE + GPIO_O_LOCK) = GPIO_LOCK_KEY;
+    HWREG(GPIO_PORTF_BASE + GPIO_O_CR) = 0X1;
+    GPIOPinTypeGPIOInput(GPIO_PORTF_BASE, GPIO_PIN_4 | GPIO_PIN_0);
+    GPIOPadConfigSet(GPIO_PORTF_BASE, GPIO_PIN_4 | GPIO_PIN_0 , GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART4);                                                //CONFIGURACION UART
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
+    GPIOPinConfigure(GPIO_PC4_U4RX);
+    GPIOPinConfigure(GPIO_PC5_U4TX);
+    GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+
+    UARTConfigSetExpClk(UART4_BASE, SysCtlClockGet(), 115200, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));  //UART
+
+    UARTSend(UART4_BASE, (uint8_t *)wifi, strlen(wifi));                                        //CONECTARSE A WIFI
+    SysCtlDelay(100 * (SysCtlClockGet() / 3 / 1000));
+    VAR = 0;
+    while(1)
+    {
+        modo = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);        //PARTE 1 
+        if (modo == 0){
+            while(modo== 0){
+                SysCtlDelay(10 * (SysCtlClockGet() / 3 / 1000));
+                modo = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
+            }
+            if (VAR<=8){
+                VAR++;
+            }else{
+                VAR = 1;
+            }
+        }switch (VAR){
+        case 1:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_1, 0x0);
+            envio[153] = '1';
+            envio[162] = '0';
+            envio[163] = '0';
+            envio[164] = '0';
+            envio[165] = '0';
+            envio[166] = '0';
+            envio[167] = '0';
+            break;
+        case 2:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, GPIO_PIN_2);
+            envio[153] = '2';
+            envio[162] = '0';
+            envio[163] = '0';
+            envio[164] = '0';
+            envio[165] = '0';
+            envio[166] = 'F';
+            envio[167] = 'F';
+            break;
+        case 3:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, 0x0 | GPIO_PIN_3);
+            envio[153] = '3';
+            envio[162] = '0';
+            envio[163] = '0';
+            envio[164] = 'F';
+            envio[165] = 'F';
+            envio[166] = '0';
+            envio[167] = '0';
+            break;
+        case 4:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, 0x0 | GPIO_PIN_2 | GPIO_PIN_3);
+            envio[153] = '4';
+            envio[162] = '0';
+            envio[163] = '0';
+            envio[164] = 'F';
+            envio[165] = 'F';
+            envio[166] = 'F';
+            envio[167] = 'F';
+            break;
+        case 5:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, 0x0 | GPIO_PIN_1);
+            envio[153] = '5';
+            envio[162] = 'F';
+            envio[163] = 'F';
+            envio[164] = '0';
+            envio[165] = '0';
+            envio[166] = '0';
+            envio[167] = '0';
+            break;
+        case 6:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, GPIO_PIN_2 | GPIO_PIN_1);
+            envio[153] = '6';
+            envio[162] = 'F';
+            envio[163] = 'F';
+            envio[164] = '0';
+            envio[165] = '0';
+            envio[166] = 'F';
+            envio[167] = 'F';
+            break;
+        case 7:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, GPIO_PIN_3 | GPIO_PIN_1 | 0X0);
+            envio[153] = '7';
+            envio[162] = 'F';
+            envio[163] = 'F';
+            envio[164] = 'F';
+            envio[165] = 'F';
+            envio[166] = '0';
+            envio[167] = '0';
+            break;
+        case 8:
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2, GPIO_PIN_3 | GPIO_PIN_1 | GPIO_PIN_2);
+            envio[153] = '8';
+            envio[162] = 'F';
+            envio[163] = 'F';
+            envio[164] = 'F';
+            envio[165] = 'F';
+            envio[166] = 'F';
+            envio[167] = 'F';
+            break;
+        case 9:
+            VAR = 1;
+            break;
+        }
+        estado = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0);
+        if (estado == 0){
+            while(estado== 0){
+                SysCtlDelay(10 * (SysCtlClockGet() / 3 / 1000));
+                estado = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0);
+            }
+            UARTSend(UART4_BASE, (uint8_t *)conect, strlen(conect)-strlen(wifi));                //COMUNICACION CON EL SERVIDOR
+            SysCtlDelay(100 * (SysCtlClockGet() / 3 / 1000));
+            UARTSend(UART4_BASE, (uint8_t *)"AT+CIPSEND=170\r\n", strlen("AT+CIPSEND=170\r\n"));
+            SysCtlDelay(100 * (SysCtlClockGet() / 3 / 1000));
+            UARTSend(UART4_BASE, (uint8_t *)envio, strlen(envio)-strlen(conect)+1);
+            SysCtlDelay(100 * (SysCtlClockGet() / 3 / 1000));
+        }
+
+    }
+}
+
+void UARTSend(uint32_t ui32UARTBase, const uint8_t *pui8Buffer, uint32_t ui32Count)
+{
+    //
+    // Loop while there are more characters to send.
+    //
+    while(ui32Count--)
+    {
+        //
+        // Write the next character to the UART.
+        //
+        MAP_UARTCharPut(ui32UARTBase, *pui8Buffer++);
+    }
+}
